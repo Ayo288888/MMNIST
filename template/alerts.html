@@ -1,0 +1,303 @@
+{% extends "base_dashboard.html" %}
+
+{% block content %}
+<div class="content">
+    <nav class="navbar">
+        <a class="navbar-brand" href="#" style="color:#00d4ff;">Alerts</a>
+    </nav>
+
+    <style>
+        body { background-color: transparent; color: #2c3e50; padding: 0; font-size: 12px; }
+
+        .current-alert {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #ccc;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            font-size: 12px;
+        }
+        .current-alert.critical { border-left-color: #e74c3c; }
+        .current-alert.high     { border-left-color: #f39c12; }
+        .current-alert.medium   { border-left-color: #f1c40f; }
+        .current-alert.low      { border-left-color: #2ecc71; }
+
+        .alert-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+        .alert-title {
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .alert-title iconify-icon { font-size: 20px; color: #e74c3c; }
+
+        .alert-severity {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 12px;
+            color: #fff;
+        }
+        .critical .alert-severity { background: #e74c3c; }
+        .high     .alert-severity { background: #f39c12; }
+        .medium   .alert-severity { background: #f1c40f; color: #333; }
+        .low      .alert-severity { background: #2ecc71; }
+
+        .alert-details { margin: 12px 0; font-size: 12px; line-height: 1.6; color: #555; }
+        .alert-time    { font-size: 12px; color: #888; text-align: right; }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent, #00d4ff);
+            margin: 20px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section-title iconify-icon { font-size: 18px; }
+
+        .history-wrap {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 70px;
+        }
+
+        .history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .history-table th {
+            background: #1a2639;
+            color: #fff;
+            padding: 10px 14px;
+            font-size: 12px;
+            white-space: nowrap;
+            text-align: left;
+        }
+        .history-table td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #2c3e50;
+            font-size: 12px;
+        }
+        .history-table tr:hover { background: #fafafa; }
+        .history-table tr.high-severity { background: rgba(231,76,60,0.07); }
+
+        .severity-badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-critical { background: rgba(231,76,60,0.15); color: #c0392b; }
+        .badge-high     { background: rgba(243,156,18,0.15); color: #d68910; }
+        .badge-medium   { background: rgba(241,196,15,0.15); color: #b7950b; }
+        .badge-low      { background: rgba(46,204,113,0.15); color: #1e8449; }
+
+        .refresh-btn {
+            background: #FF6B35;
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 16px;
+            transition: background 0.2s;
+        }
+        .refresh-btn:hover { background: #ff8157; }
+        .refresh-btn iconify-icon { font-size: 15px; }
+
+        .no-alerts { text-align: center; padding: 30px; color: #888; font-size: 12px; }
+        .no-alerts iconify-icon { font-size: 36px; display: block; margin-bottom: 8px; color: #2ecc71; }
+    </style>
+
+    <button class="refresh-btn" onclick="loadAlerts()">
+        <iconify-icon icon="fluent:arrow-counterclockwise-20-regular"></iconify-icon> Refresh Alerts
+    </button>
+
+    <div class="section-title">
+        <iconify-icon icon="fluent:alert-urgent-20-regular"></iconify-icon> Current Alert
+    </div>
+    <div id="currentAlertContainer">
+        <div class="no-alerts" id="noAlertsMessage">
+            <iconify-icon icon="fluent:checkmark-circle-20-regular"></iconify-icon>
+            <p>No active security alerts</p>
+        </div>
+    </div>
+
+    <div class="section-title">
+        <iconify-icon icon="fluent:history-20-regular"></iconify-icon> Attack History
+    </div>
+    <div class="history-wrap">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Attack Name</th>
+                    <th>Severity</th>
+                    <th>Date Detected</th>
+                    <th>Time Detected</th>
+                </tr>
+            </thead>
+            <tbody id="historyTable"></tbody>
+        </table>
+        <div style="padding:10px 14px;">
+            <div class="pagination-controls" id="history-pagination"></div>
+            <div class="pagination-info" id="history-info"></div>
+        </div>
+    </div>
+
+    <div class="footer"><p>© 2025 Advanced IDS – All Rights Reserved</p></div>
+
+    <script>
+        const PER_PAGE = 10;
+        let allAlerts = [];
+        let histPage = 1;
+
+        document.addEventListener('DOMContentLoaded', loadAlerts);
+
+        function loadAlerts() {
+            fetch('/get_alerts')
+                .then(r => r.json())
+                .then(data => {
+                    allAlerts = data;
+                    renderCurrentAlert(data);
+                    renderHistoryPage(1);
+                })
+                .catch(() => alert('Failed to load alerts'));
+        }
+
+        function renderCurrentAlert(alerts) {
+            document.querySelector('.current-alert')?.remove();
+            const container = document.getElementById('currentAlertContainer');
+            const noMsg    = document.getElementById('noAlertsMessage');
+            if (!alerts.length) { noMsg.style.display = 'block'; return; }
+            noMsg.style.display = 'none';
+            const a = alerts[0];
+            const div = document.createElement('div');
+            div.className = `current-alert ${a.severity.toLowerCase()}`;
+            div.innerHTML = `
+                <div class="alert-header">
+                    <div class="alert-title">
+                        <iconify-icon icon="fluent:warning-20-regular"></iconify-icon>
+                        ${a.attack_name}
+                    </div>
+                    <div class="alert-severity">${a.severity}</div>
+                </div>
+                <div class="alert-details">${getDesc(a.attack_name)}</div>
+                <div class="alert-time">${fmtDate(a.day_detected)} at ${a.time_detected}</div>
+            `;
+            container.prepend(div);
+        }
+
+        function renderHistoryPage(page) {
+            histPage = page;
+            const start = (page - 1) * PER_PAGE;
+            const slice = allAlerts.slice(start, start + PER_PAGE);
+            const tbody = document.getElementById('historyTable');
+            tbody.innerHTML = '';
+
+            if (!allAlerts.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#888;">No attack history found</td></tr>';
+                return;
+            }
+
+            slice.forEach((a, i) => {
+                const tr = document.createElement('tr');
+                if (a.severity === 'High' || a.severity === 'Critical') tr.className = 'high-severity';
+                tr.innerHTML = `
+                    <td>${start + i + 1}</td>
+                    <td>${a.attack_name}</td>
+                    <td><span class="severity-badge badge-${a.severity.toLowerCase()}">${a.severity}</span></td>
+                    <td>${fmtDate(a.day_detected)}</td>
+                    <td>${a.time_detected}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            buildPagination('history-pagination', allAlerts.length, page, PER_PAGE, renderHistoryPage);
+            const end = Math.min(start + PER_PAGE, allAlerts.length);
+            document.getElementById('history-info').textContent =
+                `Showing ${start + 1}–${end} of ${allAlerts.length} entries`;
+        }
+
+        /* ── Shared pagination helper ── */
+        function buildPagination(id, total, current, perPage, onPage) {
+            const pages = Math.ceil(total / perPage);
+            const el = document.getElementById(id);
+            el.innerHTML = '';
+            if (pages <= 1) return;
+            el.appendChild(mkBtn('‹', current === 1, () => onPage(current - 1)));
+            pageRange(current, pages).forEach(p => {
+                if (p === '…') { const s = mkBtn('…', true, null); el.appendChild(s); }
+                else {
+                    const b = mkBtn(p, false, () => onPage(p));
+                    if (p === current) b.classList.add('active');
+                    el.appendChild(b);
+                }
+            });
+            el.appendChild(mkBtn('›', current === pages, () => onPage(current + 1)));
+        }
+
+        function mkBtn(label, disabled, onClick) {
+            const b = document.createElement('button');
+            b.className = 'pagination-controls';
+            b.style.cssText = 'background:#fff;border:1px solid #dee2e6;color:#2c3e50;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;min-width:32px;margin:2px;transition:all 0.15s;';
+            b.textContent = label;
+            b.disabled = disabled;
+            if (disabled) b.style.opacity = '0.4';
+            if (!disabled && onClick) b.addEventListener('click', onClick);
+            b.addEventListener('mouseenter', () => { if (!disabled) { b.style.background='#FF6B35'; b.style.color='#fff'; } });
+            b.addEventListener('mouseleave', () => { if (!b.classList.contains('active-btn')) { b.style.background=''; b.style.color=''; } });
+            return b;
+        }
+
+        function pageRange(current, total) {
+            if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+            if (current <= 4) return [1, 2, 3, 4, 5, '…', total];
+            if (current >= total - 3) return [1, '…', total-4, total-3, total-2, total-1, total];
+            return [1, '…', current-1, current, current+1, '…', total];
+        }
+
+        function fmtDate(d) {
+            const [y, m, day] = d.split('-');
+            return `${day}/${m}/${y.slice(2)}`;
+        }
+
+        function getDesc(name) {
+            const d = {
+                neptune: 'DoS attack flooding target with SYN packets',
+                warezclient: 'Unauthorized download of illegal software',
+                ipsweep: 'Network reconnaissance to identify active hosts',
+                portsweep: 'Scanning multiple ports to find vulnerable services',
+                teardrop: 'Fragmented packet attack causing system crashes',
+                nmap: 'Network mapping and port scanning activity',
+                satan: 'Security Administrator Tool for Analyzing Networks scan',
+                smurf: 'ICMP flood attack amplifying traffic volume',
+                pod: 'Ping of Death with oversized packets',
+                back: 'Back Orifice malware activity detected',
+                guess_passwd: 'Brute-force password guessing attempt',
+                ftp_write: 'Unauthorized FTP write access attempt',
+                multihop: 'Attacker pivoting through multiple systems',
+                rootkit: 'Rootkit installation attempt detected',
+                buffer_overflow: 'Buffer overflow vulnerability exploit attempt',
+                imap: 'IMAP service exploitation attempt',
+                warezmaster: 'Software piracy master server connection',
+                phf: 'PHF CGI script exploitation attempt',
+                land: 'LAND attack — spoofed self-directed packets',
+                loadmodule: 'Attempt to load malicious kernel module',
+                spy: 'Spyware communication detected',
+                perl: 'Malicious Perl script execution attempt',
+            };
+            return d[name.toLowerCase()] || 'Suspicious network activity detected';
+        }
+    </script>
+</div>
+{% endblock %}

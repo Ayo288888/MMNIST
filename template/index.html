@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDS - Advanced Intrusion Detection System</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js"></script>
+</head>
+<body>
+    <div class="background-container"></div>
+    <canvas class="network-visualization" id="networkCanvas"></canvas>
+    <div class="overlay"></div>
+
+    <a href="{{ url_for('landing') }}" class="home-btn">
+        <iconify-icon icon="fluent:home-20-regular"></iconify-icon>
+        <span>Home</span>
+    </a>
+
+    <!-- Server flash messages (read by JS and shown as Fluent toasts) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="serverMessages" hidden>
+                {% for category, message in messages %}
+                    <span data-type="{{ category }}" data-msg="{{ message }}"></span>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo">
+                <iconify-icon icon="fluent:shield-lock-20-regular" class="shield-icon"></iconify-icon>
+            </div>
+            <h2 class="login-title">Advanced IDS</h2>
+            <p class="login-subtitle">Intrusion Detection System Portal</p>
+
+            <form id="loginForm" method="POST" action="{{ url_for('login') }}">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Username" required autocomplete="username">
+                    <label for="username"><iconify-icon icon="fluent:person-20-regular"></iconify-icon> Username</label>
+                </div>
+
+                <div class="password-wrap mb-1">
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required autocomplete="current-password" minlength="8">
+                        <label for="password"><iconify-icon icon="fluent:lock-closed-20-regular"></iconify-icon> Password</label>
+                    </div>
+                    <button type="button" class="pw-toggle" id="pwToggle" tabindex="-1" aria-label="Show password">
+                        <iconify-icon icon="fluent:eye-20-regular" id="pwToggleIcon"></iconify-icon>
+                    </button>
+                </div>
+
+                <!-- Password requirements indicator -->
+                <div class="pw-requirements" id="pwRequirements">
+                    <div class="req-item" id="req-len">
+                        <iconify-icon icon="fluent:circle-20-regular"></iconify-icon>
+                        <span>At least 8 characters</span>
+                    </div>
+                    <div class="req-item" id="req-upper">
+                        <iconify-icon icon="fluent:circle-20-regular"></iconify-icon>
+                        <span>One uppercase letter (A-Z)</span>
+                    </div>
+                    <div class="req-item" id="req-lower">
+                        <iconify-icon icon="fluent:circle-20-regular"></iconify-icon>
+                        <span>One lowercase letter (a-z)</span>
+                    </div>
+                    <div class="req-item" id="req-num">
+                        <iconify-icon icon="fluent:circle-20-regular"></iconify-icon>
+                        <span>One number (0-9)</span>
+                    </div>
+                    <div class="req-item" id="req-special">
+                        <iconify-icon icon="fluent:circle-20-regular"></iconify-icon>
+                        <span>One special character (!@#$...)</span>
+                    </div>
+                </div>
+
+                <div class="remember-forgot mt-3">
+                    <div class="remember-me">
+                        <input class="form-check-input me-2" type="checkbox" value="" id="rememberMe">
+                        <label class="form-check-label" for="rememberMe">Remember me</label>
+                    </div>
+                    <a href="#" class="forgot-password">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-login mt-4" id="loginBtn">
+                    <iconify-icon icon="fluent:arrow-enter-20-regular"></iconify-icon> Log In
+                </button>
+            </form>
+
+            <div class="divider">or</div>
+
+            <a href="{{ url_for('register') }}" class="register-link">
+                <iconify-icon icon="fluent:person-add-20-regular"></iconify-icon> Create a new account
+            </a>
+
+            <div class="login-footer">
+                <p>Protected by Advanced IDS Technology</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fluent Toast Container -->
+    <div id="fluentToastContainer" class="fluent-toast-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>

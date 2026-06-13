@@ -1,0 +1,226 @@
+{% extends "base_dashboard.html" %}
+
+{% block content %}
+<div class="content">
+    <nav class="navbar">
+        <a class="navbar-brand" href="#">System Security Logs</a>
+    </nav>
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+        body { background: transparent; color: #2c3e50; font-size: 12px; }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .page-header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #FF6B35;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .page-header h1 iconify-icon { font-size: 22px; }
+
+        .filter-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+        .filter-container select {
+            padding: 8px 30px 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            background: #1a2639;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+        }
+
+        .refresh-btn {
+            background: #FF6B35;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .refresh-btn:hover { background: #ff8157; }
+        .refresh-btn iconify-icon { font-size: 15px; }
+
+        .log-wrap {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 70px;
+        }
+
+        #logsTable th { background: #1a2639; color: #fff; font-size: 12px; padding: 10px 12px; }
+        #logsTable td { font-size: 12px; color: #2c3e50; padding: 9px 12px; vertical-align: middle; }
+        #logsTable tbody tr:hover { background: #fafafa; }
+
+        .log-badge {
+            padding: 3px 9px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .log-badge iconify-icon { font-size: 13px; }
+        .badge-attack { background: rgba(231,76,60,0.12); color: #c0392b; }
+        .badge-user   { background: rgba(46,204,113,0.12); color: #1e8449; }
+
+        .severity-high     { color: #d68910; font-weight: 600; font-size: 12px; }
+        .severity-critical { color: #c0392b; font-weight: 600; font-size: 12px; }
+        .severity-medium   { color: #b7950b; font-size: 12px; }
+        .severity-low      { color: #1e8449; font-size: 12px; }
+
+        /* DataTables overrides */
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_filter input {
+            font-size: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 4px 8px;
+            color: #2c3e50;
+        }
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate { font-size: 12px; }
+        .dataTables_wrapper .paginate_button { font-size: 12px !important; }
+
+        .spinner-icon { animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .page-header { flex-direction: column; align-items: flex-start; }
+            .filter-container { width: 100%; }
+            .filter-container select, .refresh-btn { width: 100%; }
+            #logsTable th, #logsTable td { font-size: 11px; padding: 7px 8px; }
+        }
+    </style>
+
+    <div class="page-header">
+        <h1>
+            <iconify-icon icon="fluent:document-bullet-list-20-regular"></iconify-icon>
+            System Logs
+        </h1>
+        <div class="filter-container">
+            <select id="logType">
+                <option value="">All Logs</option>
+                <option value="attack">Attack Logs</option>
+                <option value="user">User Logs</option>
+            </select>
+            <select id="timeRange">
+                <option value="7">Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+                <option value="all">All Time</option>
+            </select>
+            <button class="refresh-btn" id="refreshBtn">
+                <iconify-icon icon="fluent:arrow-counterclockwise-20-regular"></iconify-icon>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="log-wrap">
+        <table id="logsTable" class="display nowrap" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Severity</th>
+                    <th>Username</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="footer"><p>© 2025 Advanced IDS – All Rights Reserved</p></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            const table = $('#logsTable').DataTable({
+                responsive: true,
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
+                ajax: {
+                    url: '/get_system_logs',
+                    dataSrc: '',
+                    error: (xhr) => alert('Failed to load logs: ' + (xhr.responseJSON?.error || 'Server error'))
+                },
+                columns: [
+                    {
+                        data: 'timestamp',
+                        render: d => new Date(d).toLocaleString()
+                    },
+                    {
+                        data: 'log_type',
+                        render: d => {
+                            const isAttack = d === 'attack';
+                            return `<span class="log-badge ${isAttack ? 'badge-attack' : 'badge-user'}">
+                                <iconify-icon icon="fluent:${isAttack ? 'flash-20-regular' : 'person-20-regular'}"></iconify-icon>
+                                ${d.charAt(0).toUpperCase() + d.slice(1)}
+                            </span>`;
+                        }
+                    },
+                    {
+                        data: 'description',
+                        render: (d, _, row) => row.activity ? `${d}: ${row.activity}` : d
+                    },
+                    {
+                        data: 'severity',
+                        render: d => {
+                            if (!d) return '—';
+                            const cls = { critical: 'severity-critical', high: 'severity-high', medium: 'severity-medium', low: 'severity-low' }[d.toLowerCase()] || '';
+                            return `<span class="${cls}">${d}</span>`;
+                        }
+                    },
+                    {
+                        data: 'username',
+                        render: d => d || 'System'
+                    }
+                ],
+                order: [[0, 'desc']],
+                language: {
+                    emptyTable: 'No system logs available',
+                    zeroRecords: 'No matching logs found',
+                    info: 'Showing _START_–_END_ of _TOTAL_ entries',
+                    infoEmpty: 'Showing 0 entries',
+                    search: '<iconify-icon icon="fluent:search-20-regular"></iconify-icon>'
+                }
+            });
+
+            $('#refreshBtn').on('click', function () {
+                const type  = $('#logType').val();
+                const range = $('#timeRange').val();
+                $(this).html('<iconify-icon icon="fluent:spinner-ios-20-regular" class="spinner-icon"></iconify-icon> Loading…');
+                table.ajax.url(`/get_system_logs?type=${type}&range=${range}`).load(() => {
+                    $('#refreshBtn').html('<iconify-icon icon="fluent:arrow-counterclockwise-20-regular"></iconify-icon> Refresh');
+                });
+            });
+        });
+    </script>
+</div>
+{% endblock %}

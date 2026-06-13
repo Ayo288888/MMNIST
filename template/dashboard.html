@@ -1,0 +1,348 @@
+{% extends "base_dashboard.html" %}
+
+{% block content %}
+<div class="content">
+    <nav class="navbar">
+        <a class="navbar-brand" href="#">Dashboard</a>
+    </nav>
+
+    <div class="dashboard-header">
+        <h1>Real-Time IDS Dashboard</h1>
+        <p>Monitor and respond to network threats instantly</p>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row mb-2">
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <div class="stat-card">
+                <iconify-icon icon="fluent:shield-checkmark-20-regular"></iconify-icon>
+                <div class="stat-value" id="total-attacks">—</div>
+                <div class="stat-label">Total Attacks</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <div class="stat-card">
+                <iconify-icon icon="fluent:arrow-trending-20-regular"></iconify-icon>
+                <div class="stat-value" id="most-common" style="font-size:14px;">—</div>
+                <div class="stat-label">Most Common Attack</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <div class="stat-card">
+                <iconify-icon icon="fluent:gauge-20-regular"></iconify-icon>
+                <div class="stat-value" id="medium-severity">0%</div>
+                <div class="stat-label">Medium Severity</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <div class="stat-card">
+                <iconify-icon icon="fluent:warning-20-regular"></iconify-icon>
+                <div class="stat-value" id="high-severity-count">—</div>
+                <div class="stat-label">High Severity Threats</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row: Donut + Bar -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h4>
+                <iconify-icon icon="fluent:data-pie-20-regular"></iconify-icon>
+                Attack Type Distribution
+            </h4>
+            <div class="chart-wrap">
+                <canvas id="attackDonut"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h4>
+                <iconify-icon icon="fluent:data-bar-vertical-20-regular"></iconify-icon>
+                Severity Breakdown
+            </h4>
+            <div class="chart-wrap">
+                <canvas id="severityBar"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full-width trend line -->
+    <div class="chart-full">
+        <h4 style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <iconify-icon icon="fluent:data-trending-20-regular"></iconify-icon>
+            Monthly Attack Trends
+        </h4>
+        <div class="chart-wrap">
+            <canvas id="trendLine"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent Alerts Table -->
+    <div class="monitoring-table">
+        <h3>
+            <iconify-icon icon="fluent:shield-20-regular"></iconify-icon>
+            Recent Alerts
+        </h3>
+        <div class="table-responsive">
+            <table class="table table-hover" id="alerts-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Attack Name</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="pagination-controls" id="alerts-pagination"></div>
+        <div class="pagination-info" id="alerts-info"></div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="danger-zone">
+        <iconify-icon icon="fluent:warning-20-regular"></iconify-icon>
+        <span id="danger-zone-text">Checking for critical threats…</span>
+    </div>
+
+    <div class="footer">
+        <p>© 2025 Advanced IDS – All Rights Reserved</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const COLORS = ['#FF6B35','#00d4ff','#1a2639','#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#3498db'];
+const SEV_COLORS = { Critical: '#e74c3c', High: '#f39c12', Medium: '#f1c40f', Low: '#2ecc71' };
+
+const PER_PAGE = 10;
+let alertsAll = [];
+let alertsPage = 1;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Parallel fetches
+    fetch('/get_alerts')
+        .then(r => r.json())
+        .then(alerts => {
+            alertsAll = alerts;
+
+            // Stat: medium severity %
+            if (alerts.length) {
+                const med = alerts.filter(a => a.severity === 'Medium').length;
+                document.getElementById('medium-severity').textContent =
+                    Math.round((med / alerts.length) * 100) + '%';
+            }
+
+            buildDonut(alerts);
+            buildSeverityBar(alerts);
+            renderAlertsPage(1);
+        })
+        .catch(console.error);
+
+    fetch('/get_attack_stats')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('total-attacks').textContent = data.total_attacks ?? 0;
+            document.getElementById('most-common').textContent  = data.most_common  ?? '—';
+            document.getElementById('high-severity-count').textContent = data.high_severity ?? 0;
+            buildTrendLine(data);
+        })
+        .catch(console.error);
+
+    fetch('/get_system_logs')
+        .then(r => r.json())
+        .then(updateDangerZone)
+        .catch(console.error);
+});
+
+/* ── Charts ── */
+function buildDonut(alerts) {
+    const counts = {};
+    alerts.forEach(a => { counts[a.attack_name] = (counts[a.attack_name] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 9);
+
+    new Chart(document.getElementById('attackDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: sorted.map(([k]) => k),
+            datasets: [{
+                data: sorted.map(([, v]) => v),
+                backgroundColor: COLORS,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { font: { size: 11 }, color: '#2c3e50', padding: 10, boxWidth: 12 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed / alerts.length * 100)}%)`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function buildSeverityBar(alerts) {
+    const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+    alerts.forEach(a => { if (counts[a.severity] !== undefined) counts[a.severity]++; });
+
+    new Chart(document.getElementById('severityBar'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(counts),
+            datasets: [{
+                label: 'Attacks',
+                data: Object.values(counts),
+                backgroundColor: Object.keys(counts).map(k => SEV_COLORS[k]),
+                borderRadius: 5,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#FF6B35', bodyColor: '#2c3e50', borderColor: '#FF6B35', borderWidth: 1 }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { color: '#2c3e50', font: { size: 11 }, stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                x: { ticks: { color: '#2c3e50', font: { size: 11 } }, grid: { display: false } }
+            }
+        }
+    });
+}
+
+function buildTrendLine(data) {
+    new Chart(document.getElementById('trendLine'), {
+        type: 'line',
+        data: {
+            labels: data.months || [],
+            datasets: [{
+                label: 'Attacks / Month',
+                data: data.counts || [],
+                borderColor: '#FF6B35',
+                backgroundColor: 'rgba(255,107,53,0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#FF6B35',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { font: { size: 11 }, color: '#2c3e50' } },
+                tooltip: { backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#FF6B35', bodyColor: '#2c3e50', borderColor: '#FF6B35', borderWidth: 1 }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { color: '#2c3e50', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                x: { ticks: { color: '#2c3e50', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+            }
+        }
+    });
+}
+
+/* ── Pagination ── */
+function renderAlertsPage(page) {
+    alertsPage = page;
+    const start = (page - 1) * PER_PAGE;
+    const slice = alertsAll.slice(start, start + PER_PAGE);
+    const tbody = document.querySelector('#alerts-table tbody');
+    tbody.innerHTML = '';
+
+    if (!alertsAll.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No alerts recorded yet</td></tr>';
+        return;
+    }
+
+    slice.forEach((alert, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${start + i + 1}</td>
+            <td>${alert.attack_name}</td>
+            <td>${alert.severity}</td>
+            <td><span class="badge ${getBadgeClass(alert.severity)}">${getStatusLabel(alert.severity)}</span></td>
+            <td>${alert.day_detected} ${alert.time_detected}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    buildPagination('alerts-pagination', alertsAll.length, page, PER_PAGE, renderAlertsPage);
+    const end = Math.min(start + PER_PAGE, alertsAll.length);
+    document.getElementById('alerts-info').textContent =
+        `Showing ${start + 1}–${end} of ${alertsAll.length} entries`;
+}
+
+function buildPagination(containerId, total, current, perPage, onPage) {
+    const pages = Math.ceil(total / perPage);
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    if (pages <= 1) return;
+
+    const prev = btn('‹', current === 1, () => onPage(current - 1));
+    el.appendChild(prev);
+
+    const range = pageRange(current, pages);
+    range.forEach(p => {
+        if (p === '…') {
+            const sp = document.createElement('button');
+            sp.textContent = '…';
+            sp.disabled = true;
+            el.appendChild(sp);
+        } else {
+            const b = btn(p, false, () => onPage(p));
+            if (p === current) b.classList.add('active');
+            el.appendChild(b);
+        }
+    });
+
+    el.appendChild(btn('›', current === pages, () => onPage(current + 1)));
+}
+
+function btn(label, disabled, onClick) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.disabled = disabled;
+    if (!disabled) b.addEventListener('click', onClick);
+    return b;
+}
+
+function pageRange(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    if (current <= 4) return [1, 2, 3, 4, 5, '…', total];
+    if (current >= total - 3) return [1, '…', total-4, total-3, total-2, total-1, total];
+    return [1, '…', current-1, current, current+1, '…', total];
+}
+
+function getBadgeClass(sev) {
+    return ({ Critical: 'bg-danger', High: 'bg-warning text-dark', Medium: 'bg-info text-dark', Low: 'bg-success' })[sev] || 'bg-secondary';
+}
+
+function getStatusLabel(sev) {
+    return ({ Critical: 'Triggered', High: 'Alert', Medium: 'Investigating', Low: 'Normal' })[sev] || 'Unknown';
+}
+
+function updateDangerZone(logs) {
+    const critical = logs.filter(l =>
+        l.severity === 'Critical' && new Date(l.timestamp) > new Date(Date.now() - 86400000)
+    );
+    document.getElementById('danger-zone-text').textContent = critical.length
+        ? `Critical ${critical[0].attack_name} attack detected — Immediate action required`
+        : 'No critical threats in the last 24 hours';
+}
+</script>
+{% endblock %}

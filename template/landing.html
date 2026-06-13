@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShieldIQ | AI Powered Intrusion Detection System</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js"></script>
+    <style>
+        /* ── Base ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --navy:   #1a2639;
+            --orange: #ff6b35;
+            --teal:   #00d4ff;
+            --text:   #1e293b;
+            --muted:  #64748b;
+            --border: #e2e8f0;
+            --bg-alt: #f8fafc;
+            --white:  #ffffff;
+            --radius: 10px;
+            --shadow: 0 2px 16px rgba(0,0,0,0.07);
+            --shadow-hover: 0 6px 28px rgba(0,0,0,0.12);
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-size: 15px;
+            color: var(--text);
+            background: var(--white);
+            line-height: 1.65;
+        }
+
+        /* ── Typography ── */
+        h1,h2,h3,h4,h5 { font-weight: 700; line-height: 1.25; color: var(--navy); }
+        h1 { font-size: clamp(2rem, 5vw, 3.2rem); }
+        h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); }
+        h3 { font-size: 1.15rem; }
+        p  { color: var(--muted); }
+
+        /* ── Navbar ── */
+        .site-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--white);
+            border-bottom: 1px solid transparent;
+            padding: 0 0;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .site-nav.scrolled {
+            border-color: var(--border);
+            box-shadow: 0 1px 12px rgba(0,0,0,0.07);
+        }
+        .site-nav .inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 32px;
+        }
+
+        /* Brand */
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+        .brand-icon { display: flex; align-items: center; }
+        .brand-icon iconify-icon { font-size: 30px; color: var(--teal); }
+        .brand-name { font-size: 18px; font-weight: 700; color: var(--navy); letter-spacing: -0.3px; }
+        .brand-name span { color: var(--orange); }
+
+        /* Nav links */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            list-style: none;
+        }
+        .nav-links a {
+            padding: 8px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-links a:hover { background: var(--bg-alt); color: var(--navy); }
+        .nav-links a.active { color: var(--orange); font-weight: 600; }
+
+        /* Nav CTA */
+        .nav-cta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .btn-outline-nav {
+            padding: 8px 18px;
+            border-radius: 7px;
+            border: 1.5px solid var(--navy);
+            background: transparent;
+            color: var(--navy);
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-outline-nav:hover { background: var(--navy); color: #fff; }
+        .btn-fill-nav {
+            padding: 8px 18px;
+            border-radius: 7px;
+            border: 1.5px solid var(--orange);
+            background: var(--orange);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-fill-nav:hover { background: #e85e2a; border-color: #e85e2a; }
+
+        /* Hamburger */
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+        }
+        .hamburger-btn iconify-icon { font-size: 26px; color: var(--navy); }
+
+        /* Mobile menu */
+        .mobile-menu {
+            display: none;
+            padding: 16px 24px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--white);
+        }
+        .mobile-menu.open { display: block; }
+        .mobile-menu a {
+            display: block;
+            padding: 11px 0;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text);
+            text-decoration: none;
+            border-bottom: 1px solid var(--border);
+        }
+        .mobile-menu a:last-child { border: none; }
+        .mobile-menu .mob-cta { display: flex; gap: 10px; margin-top: 16px; }
+        .mobile-menu .mob-cta a { flex: 1; text-align: center; border-bottom: none; padding: 10px; border-radius: 7px; }
+
+        /* ── Sections ── */
+        section { padding: 96px 24px; }
+        .section-inner { max-width: 1200px; margin: 0 auto; }
+
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--orange);
+            margin-bottom: 14px;
+        }
+        .section-label iconify-icon { font-size: 14px; }
+
+        .section-heading { margin-bottom: 14px; }
+        .section-sub { font-size: 16px; color: var(--muted); max-width: 560px; }
+
+        /* ── HERO ── */
+        #home {
+            padding: 112px 24px 80px;
+            background: #121212;
+        }
+
+        /* Dark hero — text overrides */
+        #home .hero-title   { color: #ffffff; }
+        #home .hero-desc    { color: rgba(255,255,255,0.70); }
+        #home .hero-stat-val { color: #ffffff; }
+        #home .hero-stat-lbl { color: rgba(255,255,255,0.55); }
+        #home .hero-badge {
+            background: rgba(255,107,53,0.15);
+            border-color: rgba(255,107,53,0.3);
+            color: #ff8f6a;
+        }
+        #home .btn-hero-secondary {
+            color: rgba(255,255,255,0.88);
+            border-color: rgba(255,255,255,0.25);
+        }
+        #home .btn-hero-secondary:hover {
+            border-color: rgba(255,255,255,0.65);
+            background: rgba(255,255,255,0.07);
+            color: #fff;
+        }
+        #home .hero-img-wrap {
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        }
+        .hero-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+            gap: 64px;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #fff4ee;
+            color: var(--orange);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: 100px;
+            border: 1px solid #ffdacc;
+            margin-bottom: 22px;
+        }
+        .hero-badge iconify-icon { font-size: 14px; }
+        .hero-title { margin-bottom: 20px; }
+        .hero-title span { color: var(--orange); }
+        .hero-desc { font-size: 17px; margin-bottom: 36px; max-width: 500px; }
+        .hero-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 48px; }
+        .btn-hero-primary {
+            padding: 13px 28px;
+            border-radius: 8px;
+            background: var(--orange);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-hero-primary iconify-icon { font-size: 18px; }
+        .btn-hero-primary:hover { background: #e85e2a; color: #fff; transform: translateY(-1px); }
+        .btn-hero-secondary {
+            padding: 13px 28px;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--navy);
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1.5px solid var(--border);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-hero-secondary iconify-icon { font-size: 18px; }
+        .btn-hero-secondary:hover { border-color: var(--navy); color: var(--navy); }
+
+        /* Hero stats row */
+        .hero-stats { display: flex; gap: 32px; flex-wrap: wrap; }
+        .hero-stat { display: flex; flex-direction: column; }
+        .hero-stat-val { font-size: 26px; font-weight: 800; color: var(--navy); line-height: 1; }
+        .hero-stat-lbl { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+        /* Hero image */
+        .hero-img-wrap {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            align-self: center;
+        }
+        .hero-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 16px;
+        }
+        /* Blend all four edges into the dark hero background */
+        .hero-img-wrap::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 16px;
+            background:
+                linear-gradient(to right,  #121212 0%, transparent 28%),
+                linear-gradient(to left,   #121212 0%, transparent 28%),
+                linear-gradient(to bottom, #121212 0%, transparent 22%),
+                linear-gradient(to top,    #121212 0%, transparent 22%);
+            pointer-events: none;
+        }
+
+        /* ── FEATURES ── */
+        #features { background: var(--bg-alt); }
+        .features-header { text-align: center; margin-bottom: 56px; }
+        .features-header .section-sub { margin: 0 auto; }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .feature-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 26px;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .feature-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-3px);
+        }
+        .feature-icon {
+            width: 48px; height: 48px;
+            background: #fff4ee;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+        .feature-icon iconify-icon { font-size: 26px; color: var(--orange); }
+        .feature-card h3 { font-size: 15px; margin-bottom: 8px; }
+        .feature-card p  { font-size: 13.5px; }
+
+        /* ── HOW IT WORKS ── */
+        #how-it-works { background: var(--white); }
+        .how-header { text-align: center; margin-bottom: 60px; }
+        .how-header .section-sub { margin: 0 auto; }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            position: relative;
+        }
+        /* Connector line */
+        .steps-grid::before {
+            content: '';
+            position: absolute;
+            top: 28px;
+            left: calc(12.5% + 16px);
+            right: calc(12.5% + 16px);
+            height: 2px;
+            background: var(--border);
+            z-index: 0;
+        }
+
+        .step-card {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        .step-num {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: var(--white);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--navy);
+            position: relative;
+            z-index: 2;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .step-card:hover .step-num {
+            background: var(--orange);
+            border-color: var(--orange);
+            color: #fff;
+        }
+        .step-icon {
+            margin-bottom: 14px;
+        }
+        .step-icon iconify-icon { font-size: 32px; color: var(--muted); transition: color 0.2s; }
+        .step-card:hover .step-icon iconify-icon { color: var(--orange); }
+        .step-card h3 { font-size: 14px; margin-bottom: 8px; }
+        .step-card p  { font-size: 13px; }
+
+        /* ── ABOUT ── */
+        #about { background: var(--bg-alt); }
+        .about-inner {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 72px;
+            align-items: center;
+        }
+        .about-text .section-sub { max-width: 100%; margin-bottom: 28px; }
+        .about-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+        .about-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 14px;
+            color: var(--text);
+        }
+        .about-list li iconify-icon { font-size: 20px; color: var(--orange); flex-shrink: 0; margin-top: 1px; }
+
+        .about-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+        .about-stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px 20px;
+            text-align: center;
+        }
+        .about-stat-card iconify-icon { font-size: 30px; color: var(--orange); margin-bottom: 10px; }
+        .about-stat-val { font-size: 28px; font-weight: 800; color: var(--navy); line-height: 1; margin-bottom: 6px; }
+        .about-stat-lbl { font-size: 13px; color: var(--muted); }
+
+        /* ── CTA STRIP ── */
+        .cta-strip {
+            background: var(--navy);
+            padding: 72px 24px;
+            text-align: center;
+        }
+        .cta-strip h2 { color: #fff; margin-bottom: 14px; }
+        .cta-strip p  { color: rgba(255,255,255,0.65); max-width: 480px; margin: 0 auto 36px; font-size: 16px; }
+        .cta-strip-btns { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+        .btn-cta-white {
+            padding: 13px 30px;
+            border-radius: 8px;
+            background: #fff;
+            color: var(--navy);
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-cta-white:hover { background: #f0f9ff; color: var(--navy); transform: translateY(-1px); }
+        .btn-cta-ghost {
+            padding: 13px 30px;
+            border-radius: 8px;
+            background: transparent;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            border: 1.5px solid rgba(255,255,255,0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-cta-ghost:hover { border-color: #fff; background: rgba(255,255,255,0.06); color: #fff; }
+        .btn-cta-white iconify-icon, .btn-cta-ghost iconify-icon { font-size: 18px; }
+
+        /* ── FOOTER ── */
+        footer {
+            background: #41644A;
+            border-top: none;
+            padding: 56px 24px 32px;
+        }
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 48px;
+        }
+        .footer-brand { }
+        .footer-brand .brand { margin-bottom: 14px; }
+        .footer-brand p { font-size: 13.5px; max-width: 260px; color: rgba(255,255,255,0.7); }
+        footer .brand-name { color: #ffffff; }
+        footer .brand-name span { color: rgba(255,255,255,0.75); }
+
+        .footer-col h5 { font-size: 13px; font-weight: 700; margin-bottom: 16px; color: #ffffff; text-transform: uppercase; letter-spacing: 0.6px; }
+        .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .footer-col ul li a {
+            font-size: 13.5px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        .footer-col ul li a:hover { color: #ffffff; }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .footer-bottom p { font-size: 13px; color: rgba(255,255,255,0.6); margin: 0; }
+        .footer-bottom-links { display: flex; gap: 20px; }
+        .footer-bottom-links a { font-size: 13px; color: rgba(255,255,255,0.6); text-decoration: none; }
+        .footer-bottom-links a:hover { color: #ffffff; }
+
+        /* ── Responsive ── */
+        @media (max-width: 991px) {
+            .nav-links, .nav-cta { display: none; }
+            .hamburger-btn { display: flex; }
+            .hero-inner { grid-template-columns: 1fr; gap: 40px; }
+            .hero-img-wrap { display: none; }
+            .feature-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps-grid::before { display: none; }
+            .about-inner { grid-template-columns: 1fr; gap: 40px; }
+            .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+        }
+
+        @media (max-width: 575px) {
+            section { padding: 64px 20px; }
+            #home { padding: 80px 20px 56px; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .steps-grid { grid-template-columns: 1fr 1fr; }
+            .about-stats { grid-template-columns: 1fr 1fr; }
+            .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+            .footer-bottom { flex-direction: column; text-align: center; }
+            .hero-stats { gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     NAVBAR
+════════════════════════════════════ -->
+<nav class="site-nav" id="siteNav">
+    <div class="inner">
+        <a href="#home" class="brand">
+            <div class="brand-icon">
+                <iconify-icon icon="fluent:shield-lock-20-regular"></iconify-icon>
+            </div>
+            <span class="brand-name">Shield<span>IQ</span></span>
+        </a>
+
+        <ul class="nav-links" id="navLinks">
+            <li><a href="#home"         class="active" data-section="home">Home</a></li>
+            <li><a href="#features"     data-section="features">Features</a></li>
+            <li><a href="#how-it-works" data-section="how-it-works">How It Works</a></li>
+            <li><a href="#about"        data-section="about">About</a></li>
+        </ul>
+
+        <div class="nav-cta">
+            <a href="{{ url_for('login') }}"    class="btn-outline-nav">Login</a>
+            <a href="{{ url_for('register') }}" class="btn-fill-nav">Register</a>
+        </div>
+
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu">
+            <iconify-icon icon="fluent:navigation-20-regular" id="hamIcon"></iconify-icon>
+        </button>
+    </div>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#home"         onclick="closeMobile()">Home</a>
+        <a href="#features"     onclick="closeMobile()">Features</a>
+        <a href="#how-it-works" onclick="closeMobile()">How It Works</a>
+        <a href="#about"        onclick="closeMobile()">About</a>
+        <div class="mob-cta">
+            <a href="{{ url_for('login') }}"    class="btn-outline-nav">Login</a>
+            <a href="{{ url_for('register') }}" class="btn-fill-nav">Register</a>
+        </div>
+    </div>
+</nav>
+
+
+<!-- ════════════════════════════════════
+     SECTION 1 — HERO
+════════════════════════════════════ -->
+<section id="home">
+    <div class="hero-inner">
+        <!-- Left: copy -->
+        <div class="hero-copy">
+            <div class="hero-badge">
+                <iconify-icon icon="fluent:flash-20-regular"></iconify-icon>
+                AI Powered Security
+            </div>
+            <h1 class="hero-title">
+                Detect Network <span>Intrusions</span> Before They Strike
+            </h1>
+            <p class="hero-desc">
+                ShieldIQ uses a machine learning decision tree model trained on real network traffic to classify attacks in real time, giving your team actionable intelligence the moment a threat appears.
+            </p>
+            <div class="hero-actions">
+                <a href="{{ url_for('register') }}" class="btn-hero-primary">
+                    Get Started Free
+                    <iconify-icon icon="fluent:arrow-right-20-regular"></iconify-icon>
+                </a>
+                <a href="{{ url_for('login') }}" class="btn-hero-secondary">
+                    <iconify-icon icon="fluent:arrow-enter-20-regular"></iconify-icon>
+                    Sign In
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="hero-stat-val">23</span>
+                    <span class="hero-stat-lbl">Attack Types Detected</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-val">Real-Time</span>
+                    <span class="hero-stat-lbl">Threat Classification</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-val">ML</span>
+                    <span class="hero-stat-lbl">Decision-Tree Model</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: hero image -->
+        <div class="hero-img-wrap">
+            <img
+                src="{{ url_for('static', filename='img/hero_img.jpeg') }}"
+                alt="ShieldIQ intrusion detection dashboard"
+                class="hero-img"
+            >
+        </div>
+    </div>
+</section>
+
+
+<!-- ════════════════════════════════════
+     SECTION 2 — FEATURES
+════════════════════════════════════ -->
+<section id="features">
+    <div class="section-inner">
+        <div class="features-header">
+            <div class="section-label">
+                <iconify-icon icon="fluent:star-20-regular"></iconify-icon>
+                Core Capabilities
+            </div>
+            <h2 class="section-heading">Everything you need to protect your network</h2>
+            <p class="section-sub">Six powerful modules working together to keep your infrastructure safe around the clock.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <iconify-icon icon="fluent:eye-20-regular"></iconify-icon>
+                </div>
+                <h3>Real-Time Detection</h3>
+                <p>Analyze network packets the moment they arrive. ShieldIQ classifies each connection in milliseconds using a trained decision tree model.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <iconify-icon icon="fluent:brain-circuit-20-regular"></iconify-icon>
+                </div>
+                <h3>Machine Learning Core</h3>
+                <p>Powered by a scikit-learn decision tree classifier trained on the KDD Cup 1999 dataset, covering 23 distinct attack categories.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <iconify-icon icon="fluent:alert-20-regular"></iconify-icon>
+                </div>
+                <h3>Instant Threat Alerts</h3>
+                <p>Receive severity-tagged alerts the moment malicious traffic is identified. Filter by Critical, High, Medium, or Low severity levels.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <iconify-icon icon="fluent:data-trending-20-regular"></iconify-icon>
+                </div>
+                <h3>Attack Analytics</h3>
+                <p>Interactive charts show attack type distribution, monthly trends, and severity breakdowns, helping you spot patterns and plan defenses.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <iconify-icon icon="fluent:document-bullet-list-20-regular"></iconify-icon>
+                </div>
+                <h3>Full System Logs</h3>
+                <p>Every detection event and user action is logged with timestamps and severity. Filter, search, and export logs across any time range.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <iconify-icon icon="fluent:lock-closed-20-regular"></iconify-icon>
+                </div>
+                <h3>Secure Access Control</h3>
+                <p>Role-based authentication with hashed credentials ensures only authorized analysts can access the IDS dashboard and sensitive data.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ════════════════════════════════════
+     SECTION 3 — HOW IT WORKS
+════════════════════════════════════ -->
+<section id="how-it-works">
+    <div class="section-inner">
+        <div class="how-header">
+            <div class="section-label">
+                <iconify-icon icon="fluent:flow-20-regular"></iconify-icon>
+                The Process
+            </div>
+            <h2 class="section-heading">From raw traffic to actionable intelligence</h2>
+            <p class="section-sub">Four automated steps transform raw network data into a classified threat report in real time.</p>
+        </div>
+
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-num">1</div>
+                <div class="step-icon">
+                    <iconify-icon icon="fluent:database-arrow-up-20-regular"></iconify-icon>
+                </div>
+                <h3>Input Network Data</h3>
+                <p>Select network feature values such as source bytes, duration, service type and connection counts from guided dropdowns drawn from real traffic profiles.</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-num">2</div>
+                <div class="step-icon">
+                    <iconify-icon icon="fluent:brain-circuit-20-regular"></iconify-icon>
+                </div>
+                <h3>ML Pre-processing</h3>
+                <p>Input features are standardized by a fitted scaler, normalizing each value against the training distribution before classification.</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-icon">
+                    <iconify-icon icon="fluent:diagram-20-regular"></iconify-icon>
+                </div>
+                <h3>Attack Classification</h3>
+                <p>The decision tree model evaluates scaled features and assigns the connection to one of 23 categories, from normal traffic to rootkit activity.</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-num">4</div>
+                <div class="step-icon">
+                    <iconify-icon icon="fluent:alert-urgent-20-regular"></iconify-icon>
+                </div>
+                <h3>Alert and Log</h3>
+                <p>Malicious detections are stored with severity ratings, added to the alerts dashboard, and surfaced in system logs for analyst review.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ════════════════════════════════════
+     SECTION 4 — ABOUT
+════════════════════════════════════ -->
+<section id="about">
+    <div class="section-inner">
+        <div class="about-inner">
+            <!-- Left: text -->
+            <div class="about-text">
+                <div class="section-label">
+                    <iconify-icon icon="fluent:info-20-regular"></iconify-icon>
+                    About ShieldIQ
+                </div>
+                <h2 class="section-heading">Built for analysts who need certainty</h2>
+                <p class="section-sub">ShieldIQ was designed to bridge the gap between raw network telemetry and human-understandable threat intelligence, making ML powered security accessible to every team.</p>
+                <ul class="about-list">
+                    <li>
+                        <iconify-icon icon="fluent:checkmark-circle-20-regular"></iconify-icon>
+                        Trained on the KDD Cup 1999 benchmark dataset with 23 labeled attack classes
+                    </li>
+                    <li>
+                        <iconify-icon icon="fluent:checkmark-circle-20-regular"></iconify-icon>
+                        Decision-tree model provides transparent, explainable classification decisions
+                    </li>
+                    <li>
+                        <iconify-icon icon="fluent:checkmark-circle-20-regular"></iconify-icon>
+                        Flask based web interface accessible from any modern browser
+                    </li>
+                    <li>
+                        <iconify-icon icon="fluent:checkmark-circle-20-regular"></iconify-icon>
+                        Severity ratings mapped per attack type: Critical, High, Medium, Low
+                    </li>
+                    <li>
+                        <iconify-icon icon="fluent:checkmark-circle-20-regular"></iconify-icon>
+                        Full audit trail of every prediction and user activity logged automatically
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Right: stat cards -->
+            <div class="about-stats">
+                <div class="about-stat-card">
+                    <iconify-icon icon="fluent:shield-checkmark-20-regular"></iconify-icon>
+                    <div class="about-stat-val">23</div>
+                    <div class="about-stat-lbl">Attack Types Classified</div>
+                </div>
+                <div class="about-stat-card">
+                    <iconify-icon icon="fluent:data-trending-20-regular"></iconify-icon>
+                    <div class="about-stat-val">10</div>
+                    <div class="about-stat-lbl">Network Features Analyzed</div>
+                </div>
+                <div class="about-stat-card">
+                    <iconify-icon icon="fluent:flash-20-regular"></iconify-icon>
+                    <div class="about-stat-val">Real-Time</div>
+                    <div class="about-stat-lbl">Instant Prediction</div>
+                </div>
+                <div class="about-stat-card">
+                    <iconify-icon icon="fluent:lock-closed-20-regular"></iconify-icon>
+                    <div class="about-stat-val">100%</div>
+                    <div class="about-stat-lbl">Secure Authentication</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ════════════════════════════════════
+     CTA STRIP
+════════════════════════════════════ -->
+<div class="cta-strip">
+    <h2>Ready to secure your network?</h2>
+    <p>Create a free account and start detecting threats in minutes. No configuration required.</p>
+    <div class="cta-strip-btns">
+        <a href="{{ url_for('register') }}" class="btn-cta-white">
+            <iconify-icon icon="fluent:person-add-20-regular"></iconify-icon>
+            Create Free Account
+        </a>
+        <a href="{{ url_for('login') }}" class="btn-cta-ghost">
+            <iconify-icon icon="fluent:arrow-enter-20-regular"></iconify-icon>
+            Sign In
+        </a>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════
+     FOOTER
+════════════════════════════════════ -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <a href="#home" class="brand">
+                    <div class="brand-icon">
+                        <iconify-icon icon="fluent:shield-lock-20-regular"></iconify-icon>
+                    </div>
+                    <span class="brand-name">Shield<span>IQ</span></span>
+                </a>
+                <p>An AI-powered intrusion detection platform that classifies network threats in real time using machine learning.</p>
+            </div>
+
+            <div class="footer-col">
+                <h5>Platform</h5>
+                <ul>
+                    <li><a href="#home">Overview</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#about">About</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h5>Account</h5>
+                <ul>
+                    <li><a href="{{ url_for('login') }}">Sign In</a></li>
+                    <li><a href="{{ url_for('register') }}">Register</a></li>
+                    <li><a href="{{ url_for('login') }}">Dashboard</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h5>Technology</h5>
+                <ul>
+                    <li><a href="#how-it-works">Decision Tree</a></li>
+                    <li><a href="#how-it-works">scikit-learn</a></li>
+                    <li><a href="#how-it-works">KDD Cup 1999</a></li>
+                    <li><a href="#how-it-works">Flask API</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>© 2025 ShieldIQ | Advanced Intrusion Detection System. All rights reserved.</p>
+            <div class="footer-bottom-links">
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+                <a href="#">Contact</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+<script>
+/* ── Navbar scroll shadow ── */
+const nav = document.getElementById('siteNav');
+window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 10);
+});
+
+/* ── Hamburger ── */
+const hamBtn  = document.getElementById('hamburgerBtn');
+const hamIcon = document.getElementById('hamIcon');
+const mobMenu = document.getElementById('mobileMenu');
+let menuOpen = false;
+
+hamBtn.addEventListener('click', () => {
+    menuOpen = !menuOpen;
+    mobMenu.classList.toggle('open', menuOpen);
+    hamIcon.setAttribute('icon', menuOpen ? 'fluent:dismiss-20-regular' : 'fluent:navigation-20-regular');
+});
+
+function closeMobile() {
+    menuOpen = false;
+    mobMenu.classList.remove('open');
+    hamIcon.setAttribute('icon', 'fluent:navigation-20-regular');
+}
+
+/* ── Active nav link on scroll ── */
+const sections = document.querySelectorAll('section[id]');
+const navAnchors = document.querySelectorAll('.nav-links a[data-section]');
+
+const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            navAnchors.forEach(a => {
+                a.classList.toggle('active', a.dataset.section === entry.target.id);
+            });
+        }
+    });
+}, { threshold: 0.35 });
+
+sections.forEach(s => observer.observe(s));
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

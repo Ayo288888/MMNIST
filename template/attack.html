@@ -1,0 +1,348 @@
+{% extends "base_dashboard.html" %}
+
+{% block content %}
+<div class="content">
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Intrusion Detection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Arial', sans-serif; }
+
+        body {
+            background-color: transparent;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .progress-container { margin-bottom: 25px; }
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 100%;
+            background-color: #FF6B35;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .fields-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        @media (max-width: 768px) { .fields-container { grid-template-columns: 1fr; } }
+
+        .input-group {
+            display: none;
+            animation: fadeInUp 0.5s ease forwards;
+        }
+        .input-group:first-child { display: block; }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .input-field { position: relative; }
+
+        .input-field select {
+            width: 100%;
+            padding: 12px 44px 12px 15px;
+            background-color: whitesmoke;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #2c3e50;
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .input-field select:focus {
+            border-color: #FF6B35;
+            box-shadow: 0 0 0 3px rgba(255,107,53,0.2);
+            outline: none;
+        }
+        .input-field select.shake { animation: shake 0.5s; }
+
+        .chevron {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #888;
+            font-size: 13px;
+        }
+
+        .add-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .add-btn:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 0 10px rgba(255,107,53,0.5);
+        }
+
+        .predict-btn-container { margin-top: 30px; text-align: center; }
+        .predict-btn {
+            display: none;
+            background-color: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            animation: pulseAnimation 1.5s infinite;
+        }
+        .predict-btn:hover { background-color: #ff8157; animation: none; }
+
+        .result-card {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            animation: fadeInUp 0.5s ease forwards;
+        }
+        .result-card.normal  { background-color: rgba(46,204,113,0.1); border: 2px solid #2ecc71; }
+        .result-card.malicious { background-color: rgba(231,76,60,0.1); border: 2px solid #e74c3c; }
+        .result-title { margin-bottom: 10px; font-size: 22px; font-weight: 600; }
+        .result-card.normal .result-title   { color: #2ecc71; }
+        .result-card.malicious .result-title { color: #e74c3c; }
+        .result-details { color: #2c3e50; font-size: 16px; }
+        .icon-container { margin-bottom: 15px; }
+        .icon-container i { font-size: 48px; }
+        .normal .icon-container i   { color: #2ecc71; }
+        .malicious .icon-container i { color: #e74c3c; }
+
+        .loading { display: none; text-align: center; margin: 20px 0; }
+        .loading i { color: #FF6B35; font-size: 32px; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseAnimation {
+            0%   { transform: scale(1); }
+            50%  { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            10%,30%,50%,70%,90% { transform: translateX(-5px); }
+            20%,40%,60%,80%     { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h5 style="color:#00d4ff;">Detect Attack Using Network Data</h5>
+
+    <div class="progress-container">
+        <div class="progress-text">
+            <span>Progress</span>
+            <span id="progress-percentage">10%</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+    </div>
+
+    <form id="detection-form">
+        <div class="fields-container">
+            {% for i in range(10) %}
+            <div class="input-group" id="field{{ i+1 }}">
+                <label for="feature{{ i+1 }}">{{ feature_names[i] }}</label>
+                <div class="input-field">
+                    <select id="feature{{ i+1 }}" name="feature{{ i+1 }}" required>
+                        <option value="" disabled selected>— Select a value —</option>
+                        {% for label, val in feature_options[feature_names[i]] %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="chevron"><i class="fas fa-chevron-down"></i></span>
+                    <button type="button" class="add-btn" onclick="showNext({{ i+1 }})">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="predict-btn-container">
+            <button type="submit" class="predict-btn" id="predict-btn">Predict</button>
+        </div>
+    </form>
+
+    <div class="loading" id="loading">
+        <i class="fas fa-spinner fa-spin"></i>
+    </div>
+
+    <div class="result-card" id="result-card">
+        <div class="icon-container">
+            <i class="fas fa-shield-alt" id="result-icon"></i>
+        </div>
+        <div class="result-title" id="result-title">Normal Traffic</div>
+        <div class="result-details" id="result-details">The network traffic pattern is classified as normal.</div>
+    </div>
+</div>
+
+<script>
+    const totalFields = 10;
+    let currentField = 1;
+
+    function showNext(currentNum) {
+        const currentSelect = document.getElementById(`feature${currentNum}`);
+        if (!currentSelect.value) {
+            currentSelect.classList.add('shake');
+            setTimeout(() => currentSelect.classList.remove('shake'), 500);
+            return;
+        }
+
+        if (currentNum < totalFields) {
+            const nextField = document.getElementById(`field${currentNum + 1}`);
+            nextField.style.display = 'block';
+            nextField.querySelector('select').focus();
+            currentField++;
+        }
+
+        updateProgress();
+
+        if (currentNum === totalFields || currentField === totalFields) {
+            document.getElementById('predict-btn').style.display = 'block';
+        }
+    }
+
+    function updateProgress() {
+        const percentage = Math.min((currentField / totalFields) * 100, 100);
+        document.getElementById('progress').style.width = `${percentage}%`;
+        document.getElementById('progress-percentage').textContent = `${Math.round(percentage)}%`;
+    }
+
+    // Allow Enter key to advance to next field
+    document.querySelectorAll('.input-field select').forEach((select, index) => {
+        select.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                showNext(index + 1);
+            }
+        });
+        // Also advance on change if not the last field
+        select.addEventListener('change', () => {
+            const num = index + 1;
+            if (num < totalFields) {
+                const nextField = document.getElementById(`field${num + 1}`);
+                if (nextField.style.display !== 'block') {
+                    showNext(num);
+                }
+            } else if (num === totalFields) {
+                document.getElementById('predict-btn').style.display = 'block';
+                updateProgress();
+            }
+        });
+    });
+
+    document.getElementById('detection-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        document.getElementById('result-card').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+
+        fetch('/predict', { method: 'POST', body: new FormData(this) })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                const card    = document.getElementById('result-card');
+                const icon    = document.getElementById('result-icon');
+                const title   = document.getElementById('result-title');
+                const details = document.getElementById('result-details');
+
+                if (data.success) {
+                    if (data.attack_type === 'normal') {
+                        card.className = 'result-card normal';
+                        icon.className = 'fas fa-shield-alt';
+                        title.textContent = 'Normal Traffic';
+                        details.textContent = 'The network traffic pattern is classified as normal.';
+                    } else {
+                        card.className = 'result-card malicious';
+                        icon.className = 'fas fa-exclamation-triangle';
+                        title.textContent = 'Malicious Traffic Detected';
+                        details.textContent = `Attack type: ${data.attack_name}  |  Severity: ${data.severity}`;
+                    }
+                } else {
+                    card.className = 'result-card malicious';
+                    icon.className = 'fas fa-exclamation-circle';
+                    title.textContent = 'Error';
+                    details.textContent = data.error || 'An unknown error occurred';
+                }
+                card.style.display = 'block';
+            })
+            .catch(() => {
+                document.getElementById('loading').style.display = 'none';
+                const card = document.getElementById('result-card');
+                card.className = 'result-card malicious';
+                document.getElementById('result-icon').className = 'fas fa-exclamation-circle';
+                document.getElementById('result-title').textContent = 'Error';
+                document.getElementById('result-details').textContent = 'Network error. Please try again.';
+                card.style.display = 'block';
+            });
+    });
+
+    updateProgress();
+</script>
+</body>
+</html>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>© 2025 Advanced IDS - All Rights Reserved</p>
+    </div>
+</div>
+{% endblock %}

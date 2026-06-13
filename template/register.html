@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration - Advanced IDS</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/register.css">
+    <script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js"></script>
+    <style>
+        .home-btn {
+            position: fixed;
+            top: 18px;
+            left: 20px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(28, 30, 44, 0.75);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            padding: 7px 14px 7px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 500;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .home-btn iconify-icon { font-size: 18px; }
+        .home-btn:hover {
+            background: rgba(0, 194, 168, 0.18);
+            border-color: rgba(0, 194, 168, 0.5);
+            color: #00c2a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-container"></div>
+<canvas class="network-visualization" id="networkCanvas"></canvas>
+<div class="overlay"></div>
+
+<a href="{{ url_for('landing') }}" class="home-btn">
+    <iconify-icon icon="fluent:home-20-regular"></iconify-icon>
+    <span>Home</span>
+</a>
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="logo">
+            <div class="shield"><i class="fas fa-shield-alt"></i></div>
+        </div>
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                        <div class="custom-flash {{ category }}-flash">
+                            {% if category == 'success' %}
+                                <i class="fas fa-check-circle flash-icon"></i>
+                            {% else %}
+                                <i class="fas fa-exclamation-circle flash-icon"></i>
+                            {% endif %}
+                            <span class="flash-message">{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form id="registerForm" method="POST" action="{{ url_for('register') }}">
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                <label for="username"><i class="fas fa-user me-2"></i>Username</label>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
+                <label for="email"><i class="fas fa-envelope me-2"></i>Email</label>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
+            </div>
+
+            <!-- <div class="form-floating mb-3">
+                <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" placeholder="Confirm Password" required>
+                <label for="confirmPassword"><i class="fas fa-lock me-2"></i>Confirm Password</label>
+            </div> -->
+
+            <button type="submit" class="btn btn-primary btn-login mt-4">
+                <i class="fas fa-user-plus me-2"></i> Register
+            </button>
+        </form>
+
+        <div class="divider">or</div>
+
+        <a href="{{url_for('login')}}" class="register-link">
+            <i class="fas fa-sign-in-alt me-1"></i> Already have an account? Login
+        </a>
+
+        <div class="login-footer">
+            <p>Protected by Advanced IDS Technology</p>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-dismiss Flash Messages After 5 Seconds -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    setTimeout(() => {
+        let alerts = document.querySelectorAll(".custom-flash");
+        alerts.forEach(alert => alert.remove());
+    }, 5000);
+</script>
+<script src="../static/js/register.js"></script>
+</body>
+</html>

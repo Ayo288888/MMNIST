@@ -1,0 +1,242 @@
+{% extends "base_dashboard.html" %}
+
+{% block content %}
+<div class="content">
+    <nav class="navbar">
+        <a class="navbar-brand" href="#" style="color:#00d4ff;">Statistics</a>
+    </nav>
+
+    <style>
+        body { background: transparent; color: #2c3e50; font-size: 12px; }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .stats-header h2 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .stats-header h2 iconify-icon { font-size: 20px; color: #FF6B35; }
+
+        .time-filter { display: flex; gap: 8px; flex-wrap: wrap; }
+        .time-btn {
+            background: #f8f9fa;
+            color: #2c3e50;
+            border: 1px solid #dee2e6;
+            padding: 6px 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .time-btn.active  { background: #FF6B35; color: #fff; border-color: #FF6B35; font-weight: 600; }
+        .time-btn:hover:not(.active) { background: #e9ecef; }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .chart-box {
+            background: #fff;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .chart-box h3 { font-size: 12px; font-weight: 600; color: #00d4ff; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .chart-box h3 iconify-icon { font-size: 16px; }
+        .chart-box canvas { width: 100% !important; height: 320px !important; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 70px;
+        }
+        .stat-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .stat-card iconify-icon { font-size: 28px; color: #FF6B35; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #FF6B35; margin: 8px 0; }
+        .stat-label { font-size: 12px; color: #9ca3af; }
+
+        .spinner-icon { animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .chart-row { grid-template-columns: 1fr; }
+            .chart-box canvas { height: 240px !important; }
+        }
+    </style>
+
+    <div class="stats-header">
+        <h2>
+            <iconify-icon icon="fluent:data-trending-20-regular"></iconify-icon>
+            Monthly Attack Trends
+        </h2>
+        <div class="time-filter">
+            <button class="time-btn active" onclick="loadData('3months', this)">3 Months</button>
+            <button class="time-btn" onclick="loadData('6months', this)">6 Months</button>
+            <button class="time-btn" onclick="loadData('12months', this)">12 Months</button>
+            <button class="time-btn" onclick="loadData('all', this)">All Time</button>
+        </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="chart-row">
+        <div class="chart-box">
+            <h3>
+                <iconify-icon icon="fluent:data-trending-20-regular"></iconify-icon>
+                Trend Over Time
+            </h3>
+            <div id="lineLoading" style="text-align:center;padding:40px;">
+                <iconify-icon icon="fluent:spinner-ios-20-regular" class="spinner-icon" style="font-size:28px;color:#FF6B35;"></iconify-icon>
+            </div>
+            <canvas id="attackChart" style="display:none;"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3>
+                <iconify-icon icon="fluent:data-bar-vertical-20-regular"></iconify-icon>
+                Severity Split
+            </h3>
+            <canvas id="severityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <iconify-icon icon="fluent:shield-20-regular"></iconify-icon>
+            <div class="stat-label">Total Attacks</div>
+            <div class="stat-value" id="totalAttacks">—</div>
+        </div>
+        <div class="stat-card">
+            <iconify-icon icon="fluent:warning-20-regular"></iconify-icon>
+            <div class="stat-label">High Severity</div>
+            <div class="stat-value" id="highSeverity">—</div>
+        </div>
+        <div class="stat-card">
+            <iconify-icon icon="fluent:arrow-trending-20-regular"></iconify-icon>
+            <div class="stat-label">Most Common</div>
+            <div class="stat-value" id="commonAttack" style="font-size:18px;">—</div>
+        </div>
+        <div class="stat-card">
+            <iconify-icon icon="fluent:calendar-20-regular"></iconify-icon>
+            <div class="stat-label">Last 30 Days</div>
+            <div class="stat-value" id="lastMonth">—</div>
+        </div>
+    </div>
+
+    <div class="footer"><p>© 2025 Advanced IDS – All Rights Reserved</p></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let trendChart = null;
+        let sevChart   = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            buildSeverityChart();
+            loadData('3months', document.querySelector('.time-btn.active'));
+        });
+
+        function buildSeverityChart() {
+            fetch('/get_alerts')
+                .then(r => r.json())
+                .then(alerts => {
+                    const counts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+                    alerts.forEach(a => { if (counts[a.severity] !== undefined) counts[a.severity]++; });
+
+                    sevChart = new Chart(document.getElementById('severityChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(counts),
+                            datasets: [{
+                                label: 'Attacks',
+                                data: Object.values(counts),
+                                backgroundColor: ['#e74c3c','#f39c12','#f1c40f','#2ecc71'],
+                                borderRadius: 5
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { beginAtZero: true, ticks: { font: { size: 11 }, color: '#2c3e50', stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                                y: { ticks: { font: { size: 11 }, color: '#2c3e50' }, grid: { display: false } }
+                            }
+                        }
+                    });
+                });
+        }
+
+        function loadData(range, btn) {
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const canvas  = document.getElementById('attackChart');
+            const loading = document.getElementById('lineLoading');
+            canvas.style.display = 'none';
+            loading.style.display = 'block';
+
+            fetch(`/get_attack_stats?range=${range}`)
+                .then(r => r.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    canvas.style.display  = 'block';
+
+                    if (trendChart) {
+                        trendChart.data.labels = data.months;
+                        trendChart.data.datasets[0].data = data.counts;
+                        trendChart.update();
+                    } else {
+                        trendChart = new Chart(canvas, {
+                            type: 'line',
+                            data: {
+                                labels: data.months,
+                                datasets: [{
+                                    label: 'Attacks Detected',
+                                    data: data.counts,
+                                    borderColor: '#FF6B35',
+                                    backgroundColor: 'rgba(255,107,53,0.1)',
+                                    borderWidth: 2,
+                                    tension: 0.4,
+                                    fill: true,
+                                    pointBackgroundColor: '#FF6B35',
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { labels: { font: { size: 11 }, color: '#2c3e50' } },
+                                    tooltip: { backgroundColor: 'rgba(255,255,255,0.95)', titleColor: '#FF6B35', bodyColor: '#2c3e50', borderColor: '#FF6B35', borderWidth: 1 }
+                                },
+                                scales: {
+                                    y: { beginAtZero: true, ticks: { color: '#2c3e50', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                                    x: { ticks: { color: '#2c3e50', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+                                }
+                            }
+                        });
+                    }
+
+                    document.getElementById('totalAttacks').textContent = data.total_attacks ?? '—';
+                    document.getElementById('highSeverity').textContent  = data.high_severity  ?? '—';
+                    document.getElementById('commonAttack').textContent  = data.most_common    ?? '—';
+                    document.getElementById('lastMonth').textContent     = data.last_month     ?? '—';
+                })
+                .catch(() => { loading.innerHTML = '<p style="color:#e74c3c">Error loading data</p>'; });
+        }
+    </script>
+</div>
+{% endblock %}
