@@ -8,9 +8,9 @@ click==8.4.1
 blinker==1.9.0
 
 # ── Machine Learning ───────────────────────────────────────
-scikit-learn==1.6.1
-numpy==2.2.4
-scipy==1.15.2
+scikit-learn>=1.0
+numpy>=1.23,<2.0
+scipy>=1.10
 joblib==1.4.2
 threadpoolctl==3.6.0
 
