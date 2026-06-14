@@ -1,4 +1,5 @@
-Intrusion Detection System (IDS) Web Application
+
+#Intrusion Detection System (IDS) Web Application
 An intuitive, Flask-based web application that integrates a Machine Learning classifier to detect network intrusions and malicious activities in real-time. The system scales numerical features using a pre-trained data standardizer and predicts attack names and types via a Decision Tree model. Validated threats are logged into a local SQLite database for statistical review and system logging.
 
 🚀 Features
